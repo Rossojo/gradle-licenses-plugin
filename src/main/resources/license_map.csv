@@ -2,6 +2,7 @@ Apache-2.0,APACHE
 Apache 2.0,APACHE
 Apache v2,APACHE
 "Apache License, Version 2.0",APACHE
+"Apache License, version 2.0",APACHE
 The Apache Software License,APACHE
 "The Apache Software License, Version 2.0",APACHE
 http://www.apache.org/licenses/LICENSE-2.0.txt,APACHE
@@ -10,6 +11,8 @@ http://opensource.org/licenses/Apache-2.0,APACHE
 https://opensource.org/licenses/Apache-2.0,APACHE
 http://www.apache.org/licenses/LICENSE-2.0,APACHE
 https://www.apache.org/licenses/LICENSE-2.0,APACHE
+http://www.apache.org/licenses/LICENSE-2.0.html,APACHE
+https://www.apache.org/licenses/LICENSE-2.0.html,APACHE
 BSD-2-Clause,BSD_2
 BSD 2-Clause "Simplified" License,BSD_2
 BSD 2-Clause License,BSD_2
@@ -17,14 +20,21 @@ http://opensource.org/licenses/BSD-2-Clause,BSD_2
 https://opensource.org/licenses/BSD-2-Clause,BSD_2
 BSD-3-Clause,BSD_3
 BSD 3-Clause "New" or "Revised" License,BSD_3
+The 3-Clause BSD License,BSD_3
+Eclipse Distribution License - v 1.0,BSD_3
 http://opensource.org/licenses/BSD-3-Clause,BSD_3
 https://opensource.org/licenses/BSD-3-Clause,BSD_3
+http://www.eclipse.org/org/documents/edl-v10.php,BSD_3
+https://www.eclipse.org/org/documents/edl-v10.php,BSD_3
+EPL 2.0,EPL_2
 EPL-2.0,EPL_2
 Eclipse Public License 2.0,EPL_2
 http://www.eclipse.org/org/documents/epl-2.0/EPL-2.0.txt,EPL_2
 https://www.eclipse.org/org/documents/epl-2.0/EPL-2.0.txt,EPL_2
 http://opensource.org/licenses/EPL-2.0,EPL_2
 https://opensource.org/licenses/EPL-2.0,EPL_2
+http://www.eclipse.org/legal/epl-2.0,EPL_2
+https://www.eclipse.org/legal/epl-2.0,EPL_2
 GPL-2.0,GPL_2
 GPL-2.0-only,GPL_2
 GNU General Public License v2.0,GPL_2
@@ -41,6 +51,7 @@ http://opensource.org/licenses/GPL-3.0,GPL_3
 https://opensource.org/licenses/GPL-3.0,GPL_3
 LGPL-2.1,LGPL_2_1
 LGPL-2.1-only,LGPL_2_1
+LGPL-2.1-or-later,LGPL_2_1
 GNU Lesser General Public License v2.1,LGPL_2_1
 http://www.gnu.org/licenses/lgpl-2.1.txt,LGPL_2_1
 https://www.gnu.org/licenses/lgpl-2.1.txt,LGPL_2_1
@@ -57,6 +68,7 @@ http://opensource.org/licenses/LGPL-3.0,LGPL_3
 https://opensource.org/licenses/LGPL-3.0,LGPL_3
 MIT,MIT
 MIT License,MIT
+The MIT License (MIT),MIT
 http://opensource.org/licenses/MIT,MIT
 https://opensource.org/licenses/MIT,MIT
 MPL-2.0,MPL_2
@@ -78,5 +90,17 @@ http://www.eclipse.org/org/documents/epl-1.0/EPL-1.0.txt,EPL_1
 https://www.eclipse.org/org/documents/epl-1.0/EPL-1.0.txt,EPL_1
 http://opensource.org/licenses/EPL-1.0,EPL_1
 https://opensource.org/licenses/EPL-1.0,EPL_1
-
-
+GNU Affero General Public License v3,AGPL_3
+http://www.fsf.org/licensing/licenses/agpl-3.0.html,AGPL_3
+https://www.fsf.org/licensing/licenses/agpl-3.0.html,AGPL_3
+GPLv2+CE,GPL_2_CE
+GPL2 w/ CPE,GPL_2_CE
+http://openjdk.java.net/legal/gplv2+ce.html,GPL_2_CE
+https://openjdk.java.net/legal/gplv2+ce.html,GPL_2_CE
+http://www.gnu.org/software/classpath/license.html,GPL_2_CE
+https://www.gnu.org/software/classpath/license.html,GPL_2_CE
+"Public Domain, per Creative Commons CC0",CC0
+http://creativecommons.org/publicdomain/zero/1.0/,CC0
+https://creativecommons.org/publicdomain/zero/1.0/,CC0
+CDDL 1.1,CDDL_1_1
+https://glassfish.java.net/public/CDDL+GPL_1_1.html,CDDL_1_1

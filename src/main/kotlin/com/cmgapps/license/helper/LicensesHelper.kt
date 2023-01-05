@@ -15,12 +15,16 @@ import org.gradle.api.logging.Logger
 
 internal val LicenseId.filename: String
     get() = when (this) {
+        LicenseId.AGPL_3 -> "agpl-3.0.txt"
         LicenseId.APACHE -> "apache-2.0.txt"
         LicenseId.BSD_2 -> "bsd-2-clause.txt"
         LicenseId.BSD_3 -> "bsd-3-clause.txt"
+        LicenseId.CC0 -> "cc0.txt"
         LicenseId.CDDL -> "cddl.txt"
+        LicenseId.CDDL_1_1 -> "cddl-1.1.txt"
         LicenseId.EPL_2 -> "epl-2.0.txt"
         LicenseId.GPL_2 -> "gpl-2.0.txt"
+        LicenseId.GPL_2_CE -> "gpl-2.0-ce.txt"
         LicenseId.GPL_3 -> "gpl-3.0.txt"
         LicenseId.LGPL_2_1 -> "lgpl-2.1.txt"
         LicenseId.LGPL_3 -> "lgpl-3.0.txt"

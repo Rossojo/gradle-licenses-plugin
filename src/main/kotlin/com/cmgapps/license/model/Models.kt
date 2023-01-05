@@ -40,12 +40,16 @@ data class MavenCoordinates(
 }
 
 enum class LicenseId(val spdxLicenseIdentifier: String?) {
+    AGPL_3("AGPL-3.0-only"),
     APACHE("Apache-2.0"),
     BSD_2("BSD-2-Clause"),
     BSD_3("BSD-3-Clause"),
+    CC0("CC0-1.0"),
     CDDL("CDDL-1.0"),
+    CDDL_1_1("CDDL-1.1"),
     EPL_2("EPL-2.0"),
     GPL_2("GPL-2.0-only"),
+    GPL_2_CE("GPL-2.0-with-classpath-exception"),
     GPL_3("GPL-3.0-only"),
     LGPL_2_1("LGPL-2.1-only"),
     LGPL_3("LGPL-3.0-only"),
@@ -58,12 +62,16 @@ enum class LicenseId(val spdxLicenseIdentifier: String?) {
     companion object {
         @JvmStatic
         fun fromSpdxLicenseIdentifier(spdxLicenseIdentifier: String?): LicenseId = when (spdxLicenseIdentifier) {
+            "AGPL-3.0-only" -> AGPL_3
             "Apache-2.0" -> APACHE
             "BSD-2-Clause" -> BSD_2
             "BSD-3-Clause" -> BSD_3
+            "CC0-1.0" -> CC0
             "CDDL-1.0" -> CDDL
+            "CDDL-1.1" -> CDDL_1_1
             "EPL-2.0" -> EPL_2
             "GPL-2.0-only" -> GPL_2
+            "GPL-2.0-with-classpath-exception" -> GPL_2_CE
             "GPL-3.0-only" -> GPL_3
             "LGPL-2.1-only" -> LGPL_2_1
             "LGPL-3.0-only" -> LGPL_3
@@ -82,14 +90,14 @@ enum class LicenseId(val spdxLicenseIdentifier: String?) {
         internal val map: Map<String, LicenseId> by lazy {
             CSVFormat.DEFAULT.parse(this::class.java.getResourceAsStream("/license_map.csv")?.bufferedReader())
                 .associate {
-                    it.get(0) to LicenseId.valueOf(it.get(1))
+                    it.get(0).lowercase().trim() to LicenseId.valueOf(it.get(1))
                 }
         }
     }
 }
 
 @Serializable(with = LicenseSerializer::class)
-data class License(val id: LicenseId, val name: String, val url: String) {
+data class License(val id: LicenseId, val name: String, val url: String): java.io.Serializable {
 
     override fun hashCode(): Int {
         return id.hashCode()
@@ -113,7 +121,7 @@ data class Library(
     val name: String?,
     val description: String?,
     val licenses: List<License>,
-) {
+): java.io.Serializable {
     companion object {
         @Suppress("FunctionName")
         @JvmStatic

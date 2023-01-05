@@ -87,6 +87,9 @@ class CustomizableHtmlReport(type: ReportType, task: Task, project: Project) : L
     @Input
     val useDarkMode: Property<Boolean> = task.project.objects.property(Boolean::class.java).convention(true)
 
+    @Input
+    val reportTitle: Property<String> = task.project.objects.property(String::class.java).convention("Notice for packages:")
+
     override fun configure(
         config: (Action<in LicensesReport>)?,
         configHtml: (Action<in CustomizableHtmlReport>)?,

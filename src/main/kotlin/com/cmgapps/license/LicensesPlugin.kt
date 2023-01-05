@@ -33,21 +33,24 @@ import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 class LicensesPlugin : Plugin<Project> {
 
     override fun apply(project: Project) {
-        project.extensions.create("licenses", LicensesExtension::class.java, project).also { extension ->
-            project.plugins.withId("java") {
-                configureJavaProject(project, extension)
-            }
+        project.extensions.create("licenses", LicensesExtension::class.java, project)
+            .also { extension ->
+                configureGenericProject(project, extension)
 
-            project.plugins.withId("org.jetbrains.kotlin.multiplatform") {
-                configureMultiplatformProject(project, extension)
-            }
+                project.plugins.withId("java") {
+                    configureJavaProject(project, extension)
+                }
 
-            ANDROID_IDS.forEach { id ->
-                project.plugins.withId(id) {
-                    configureAndroidProject(project, extension)
+                project.plugins.withId("org.jetbrains.kotlin.multiplatform") {
+                    configureMultiplatformProject(project, extension)
+                }
+
+                ANDROID_IDS.forEach { id ->
+                    project.plugins.withId(id) {
+                        configureAndroidProject(project, extension)
+                    }
                 }
             }
-        }
     }
 
     companion object {
@@ -62,7 +65,24 @@ class LicensesPlugin : Plugin<Project> {
         )
 
         @JvmStatic
-        private fun configureJavaProject(project: Project, extension: LicensesExtension) {
+        private fun configureGenericProject(
+            project: Project,
+            extension: LicensesExtension
+        ) {
+            val taskName = "genericLicenseReport"
+
+            val configuration = Action<LicensesTask> { task ->
+                task.addBasicConfiguration(extension)
+            }
+
+            project.tasks.register(taskName, LicensesTask::class.java, configuration)
+        }
+
+        @JvmStatic
+        private fun configureJavaProject(
+            project: Project,
+            extension: LicensesExtension
+        ) {
             val taskName = "licenseReport"
 
             val configuration = Action<LicensesTask> { task ->
@@ -73,7 +93,10 @@ class LicensesPlugin : Plugin<Project> {
         }
 
         @JvmStatic
-        private fun configureAndroidProject(project: Project, extension: LicensesExtension) {
+        private fun configureAndroidProject(
+            project: Project,
+            extension: LicensesExtension
+        ) {
             // check for AGP 7.0+ 'androidComponent' extension
             if (findClass("com.android.build.api.variant.AndroidComponentsExtension") != null) {
                 configureAgp7Project(project, extension)
@@ -83,7 +106,10 @@ class LicensesPlugin : Plugin<Project> {
         }
 
         @JvmStatic
-        private fun configureAgp7Project(project: Project, extension: LicensesExtension) {
+        private fun configureAgp7Project(
+            project: Project,
+            extension: LicensesExtension
+        ) {
             project.logger.info("Using AGP 7.0+ AndroidComponentsExtension")
             project.extensions.getByType(com.android.build.api.variant.AndroidComponentsExtension::class.java)
                 .onVariants { variant ->
@@ -103,7 +129,10 @@ class LicensesPlugin : Plugin<Project> {
         }
 
         @JvmStatic
-        private fun configureApg4Project(project: Project, extension: LicensesExtension) {
+        private fun configureApg4Project(
+            project: Project,
+            extension: LicensesExtension
+        ) {
             project.logger.info("Using appication/libraryVariants")
             getAndroidVariants(project)?.all { androidVariant ->
                 val configuration = Action<AndroidLicensesTask> { task ->
@@ -122,7 +151,10 @@ class LicensesPlugin : Plugin<Project> {
         }
 
         @JvmStatic
-        private fun configureMultiplatformProject(project: Project, extension: LicensesExtension) {
+        private fun configureMultiplatformProject(
+            project: Project,
+            extension: LicensesExtension
+        ) {
             val kotlinMultiplatformExtension = project.extensions.getByName("kotlin") as KotlinMultiplatformExtension
 
             kotlinMultiplatformExtension.targets.all { target ->
@@ -166,6 +198,7 @@ class LicensesPlugin : Plugin<Project> {
         @JvmStatic
         private fun LicensesTask.addBasicConfiguration(extension: LicensesExtension) {
             additionalProjects = extension.additionalProjects
+            additionalLibraries = extension.additionalLibraries
             description = TASK_DESC
             group = TASK_GROUP
             reports(extension.reports)
@@ -173,21 +206,23 @@ class LicensesPlugin : Plugin<Project> {
 
         @Suppress("DEPRECATION")
         @JvmStatic
-        private fun getAndroidVariants(project: Project): DomainObjectSet<out BaseVariant>? = when {
-            project.plugins.hasPlugin(AppPlugin::class.java) ||
-                project.plugins.hasPlugin(DynamicFeaturePlugin::class.java) ->
-                project.extensions.getByType(AppExtension::class.java).applicationVariants
+        private fun getAndroidVariants(project: Project): DomainObjectSet<out BaseVariant>? =
+            when {
+                project.plugins.hasPlugin(AppPlugin::class.java) ||
+                    project.plugins.hasPlugin(DynamicFeaturePlugin::class.java) ->
+                    project.extensions.getByType(AppExtension::class.java).applicationVariants
 
-            project.plugins.hasPlugin(LibraryPlugin::class.java) ->
-                project.extensions.getByType(LibraryExtension::class.java).libraryVariants
+                project.plugins.hasPlugin(LibraryPlugin::class.java) ->
+                    project.extensions.getByType(LibraryExtension::class.java).libraryVariants
 
-            else -> null
-        }
+                else -> null
+            }
     }
 }
 
-fun findClass(fqName: String) = try {
-    Class.forName(fqName)
-} catch (ex: ClassNotFoundException) {
-    null
-}
+fun findClass(fqName: String) =
+    try {
+        Class.forName(fqName)
+    } catch (ex: ClassNotFoundException) {
+        null
+    }

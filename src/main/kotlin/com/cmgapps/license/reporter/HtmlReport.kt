@@ -10,6 +10,7 @@ import com.cmgapps.license.helper.logLicenseWarning
 import com.cmgapps.license.helper.text
 import com.cmgapps.license.helper.toLicensesMap
 import com.cmgapps.license.model.Library
+import com.cmgapps.license.model.License
 import com.cmgapps.license.model.LicenseId
 import org.gradle.api.logging.Logger
 import org.gradle.api.resources.TextResource
@@ -18,6 +19,7 @@ internal class HtmlReport(
     libraries: List<Library>,
     private val css: TextResource?,
     private val useDarkMode: Boolean,
+    private val reportTitle: String,
     private val logger: Logger,
 ) : Report(libraries) {
 
@@ -49,12 +51,17 @@ internal class HtmlReport(
 
             body {
                 h3 {
-                    +NOTICE_LIBRARIES
+                    +reportTitle
                 }
 
-                libraries.toLicensesMap().forEach { (license, libraries) ->
+                val licensesMap =
+                    libraries.toLicensesMap()
+                        .toMutableMap()
+                val librariesWithUnknownLicense = licensesMap.remove(License(LicenseId.UNKNOWN, "unknown", "unknown"))
+                licensesMap.forEach { (license, libraries) ->
                     ul {
-                        libraries.asSequence().sortedBy { it.name ?: it.mavenCoordinates.identifierWithoutVersion }
+                        libraries.asSequence()
+                            .sortedBy { it.name ?: it.mavenCoordinates.identifierWithoutVersion }
                             .forEach { library ->
                                 li {
                                     +(library.name ?: library.mavenCoordinates.identifierWithoutVersion)
@@ -74,7 +81,25 @@ internal class HtmlReport(
                                 }
                             }
                         }
+
                         else -> pre { +(license.id.text) }
+                    }
+                }
+                librariesWithUnknownLicense?.forEach { library ->
+                    ul {
+                        li {
+                            +(library.name ?: library.mavenCoordinates.identifierWithoutVersion)
+                        }
+                    }
+                    library.licenses.forEach { license ->
+                        div("license") {
+                            p {
+                                +license.name
+                            }
+                            a(license.url) {
+                                +license.url
+                            }
+                        }
                     }
                 }
             }
@@ -88,11 +113,17 @@ internal class HTML : TagWithText("html") {
         attributes["lang"] = "en"
     }
 
-    fun head(init: Head.() -> Unit) = initTag(Head(), init)
+    fun head(init: Head.() -> Unit) =
+        initTag(Head(), init)
 
-    fun body(init: Body.() -> Unit) = initTag(Body(), init)
+    fun body(init: Body.() -> Unit) =
+        initTag(Body(), init)
 
-    override fun render(builder: StringBuilder, intent: String, format: Boolean) {
+    override fun render(
+        builder: StringBuilder,
+        intent: String,
+        format: Boolean
+    ) {
         builder.append("<!DOCTYPE html>")
         if (format) {
             builder.append('\n')
@@ -102,19 +133,26 @@ internal class HTML : TagWithText("html") {
 }
 
 internal class Head : TagWithText("head") {
-    fun title(init: Title.() -> Unit) = initTag(Title(), init)
+    fun title(init: Title.() -> Unit) =
+        initTag(Title(), init)
+
     fun meta(attrs: Map<String, String>) {
         val meta = initTag(Meta()) {}
         meta.attributes.putAll(attrs)
     }
 
-    fun style(init: Style.() -> Unit) = initTag(Style(), init)
+    fun style(init: Style.() -> Unit) =
+        initTag(Style(), init)
 }
 
 internal class Title : TagWithText("title")
 internal class Meta : Tag("meta") {
 
-    override fun render(builder: StringBuilder, intent: String, format: Boolean) {
+    override fun render(
+        builder: StringBuilder,
+        intent: String,
+        format: Boolean
+    ) {
         if (format) {
             builder.append(intent)
         }
@@ -133,21 +171,36 @@ internal class Meta : Tag("meta") {
 internal class Style : TagWithText("style")
 
 internal abstract class BodyTag(name: String) : TagWithText(name) {
-    fun pre(init: Pre.() -> Unit) = initTag(Pre(), init)
-    fun h3(init: H3.() -> Unit) = initTag(H3(), init)
-    fun ul(init: Ul.() -> Unit) = initTag(Ul(), init)
-    fun li(init: Li.() -> Unit) = initTag(Li(), init)
-    fun a(href: String, init: A.() -> Unit) {
+    fun pre(init: Pre.() -> Unit) =
+        initTag(Pre(), init)
+
+    fun h3(init: H3.() -> Unit) =
+        initTag(H3(), init)
+
+    fun ul(init: Ul.() -> Unit) =
+        initTag(Ul(), init)
+
+    fun li(init: Li.() -> Unit) =
+        initTag(Li(), init)
+
+    fun a(
+        href: String,
+        init: A.() -> Unit
+    ) {
         val a = initTag(A(), init)
         a.href = href
     }
 
-    fun div(`class`: String, init: Div.() -> Unit) {
+    fun div(
+        `class`: String,
+        init: Div.() -> Unit
+    ) {
         val div = initTag(Div(), init)
         div.`class` = `class`
     }
 
-    fun p(init: P.() -> Unit) = initTag(P(), init)
+    fun p(init: P.() -> Unit) =
+        initTag(P(), init)
 }
 
 internal class Body : BodyTag("body")

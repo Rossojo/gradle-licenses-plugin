@@ -31,6 +31,7 @@ class HtmlReportShould {
             testLibraries,
             null,
             false,
+            "Notice for packages:",
             logger,
         ).generate()
 
@@ -73,6 +74,7 @@ class HtmlReportShould {
             testLibraries,
             null,
             true,
+            "Notice for packages:",
             logger,
         ).generate()
 
@@ -129,6 +131,7 @@ class HtmlReportShould {
             ),
             null,
             false,
+            "Notice for packages:",
             logger,
         ).generate()
 

@@ -33,7 +33,6 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
-import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Nested
@@ -60,6 +59,9 @@ abstract class LicensesTask : DefaultTask() {
     @Input
     var additionalProjects: Set<String> = emptySet()
 
+    @Input
+    var additionalLibraries: Set<AdditionalLibrary> = emptySet()
+
     private lateinit var pomConfiguration: Configuration
 
     private val _allProjects: Set<Project> by lazy {
@@ -69,7 +71,8 @@ abstract class LicensesTask : DefaultTask() {
             allProjects.find {
                 it.path == moduleName
             } ?: throw IllegalArgumentException("$moduleName not found")
-        }.toSet()
+        }
+            .toSet()
     }
 
     @Internal
@@ -88,9 +91,10 @@ abstract class LicensesTask : DefaultTask() {
     init {
         reports = LicensesReportsContainerImpl()
         reports.html.enabled = true
-        reports.getAll().forEach {
-            outputs.file(it.destination)
-        }
+        reports.getAll()
+            .forEach {
+                outputs.file(it.destination)
+            }
     }
 
     @TaskAction
@@ -107,17 +111,10 @@ abstract class LicensesTask : DefaultTask() {
     protected open fun collectDependencies() {
         buildSet {
             getAllProjects().forEach { project ->
-                project.configurations.findByName("compile")?.let {
-                    add(project.configurations.getByName(it.name))
-                }
-
-                project.configurations.findByName("api")?.let {
-                    add(project.configurations.getByName(it.name))
-                }
-
-                project.configurations.findByName("implementation")?.let {
-                    add(project.configurations.getByName(it.name))
-                }
+                project.configurations.findByName("runtimeClasspath")
+                    ?.let {
+                        add(project.configurations.getByName(it.name))
+                    }
             }
         }.let {
             addConfigurations(it)
@@ -125,15 +122,17 @@ abstract class LicensesTask : DefaultTask() {
     }
 
     protected fun addConfigurations(configurations: Set<Configuration>) {
-        configurations.forEach { configuration ->
-            configuration.incoming.dependencies.withType(ExternalDependency::class.java).map { dep ->
-                "${dep.group}:${dep.name}:${dep.version}@pom"
-            }.forEach { pom ->
-                pomConfiguration.dependencies.add(
-                    project.dependencies.add(POM_CONFIGURATION, pom),
-                )
+        configurations.filter { it.isCanBeResolved }
+            .forEach { configuration ->
+                configuration.resolvedConfiguration.resolvedArtifacts.map { artifact ->
+                    "${artifact.moduleVersion.id.group}:${artifact.moduleVersion.id.name}:${artifact.moduleVersion.id.version}@pom"
+                }
+                    .forEach { pom ->
+                        pomConfiguration.dependencies.add(
+                            project.dependencies.add(POM_CONFIGURATION, pom),
+                        )
+                    }
             }
-        }
     }
 
     private fun generateLibraries(): List<Library> {
@@ -147,31 +146,50 @@ abstract class LicensesTask : DefaultTask() {
 
             Library(
                 MavenCoordinates(
-                    model.findGroupId().orEmpty(),
-                    model.findArtifactId().orEmpty(),
-                    model.findVersion()?.let { version -> ComparableVersion(version) } ?: ComparableVersion(""),
+                    model.findGroupId()
+                        .orEmpty(),
+                    model.findArtifactId()
+                        .orEmpty(),
+                    model.findVersion()
+                        ?.let { version -> ComparableVersion(version) } ?: ComparableVersion(""),
                 ),
                 model.name,
                 model.findDescription(),
                 licenses,
             )
         }
+            .filter {
+                it.name?.startsWith("$")
+                    ?.not() ?: true
+            }
             .sortedWith(Library.NameComparator())
-            .toList()
-    }
-
-    private fun getPomModel(file: File): Model = MavenXpp3Reader().run {
-        file.inputStream().use {
-            read(it)
+            .toList() + additionalLibraries.map {
+            Library(
+                mavenCoordinates = MavenCoordinates(
+                    groupId = "",
+                    artifactId = "",
+                    version = ComparableVersion(""),
+                ), name = it.name, description = null, licenses = listOf(License(it.licenseId, it.licenseName, it.licenseUrl))
+            )
         }
     }
+
+    private fun getPomModel(file: File): Model =
+        MavenXpp3Reader().run {
+            file.inputStream()
+                .use {
+                    read(it)
+                }
+        }
 
     private fun Model.findLicenses(): List<License> {
         if (licenses.isNotEmpty()) {
             return licenses.mapNotNull { license ->
                 try {
                     val url = license.url
-                    val name = license.name.trim().capitalize()
+                    val name =
+                        license.name.trim()
+                            .capitalize()
                     // check for valid url
                     URL(url)
 
@@ -181,7 +199,7 @@ abstract class LicensesTask : DefaultTask() {
                         url = url,
                     )
                 } catch (ignore: Exception) {
-                    logger.warn("$name dependency has an invalid license URL; skipping license")
+                    logger.warn("$name ($groupId:$artifactId:$version) dependency has an invalid license URL |${license.url}|; skipping license")
                     null
                 }
             }
@@ -191,7 +209,8 @@ abstract class LicensesTask : DefaultTask() {
 
         if (parent != null) {
             logger.info("Checking parent POM file.")
-            return parent.getModel().findLicenses()
+            return parent.getModel()
+                .findLicenses()
         }
 
         return emptyList()
@@ -212,73 +231,86 @@ abstract class LicensesTask : DefaultTask() {
         return getPomModel(pomFile)
     }
 
-    private fun Model.findVersion(): String? = when {
-        version != null -> version
-        parent != null ->
-            if (parent.version != null) {
-                parent.version
-            } else {
-                parent.getModel().findVersion()
-            }
+    private fun Model.findVersion(): String? =
+        when {
+            version != null -> version
+            parent != null ->
+                if (parent.version != null) {
+                    parent.version
+                } else {
+                    parent.getModel()
+                        .findVersion()
+                }
 
-        else -> null
-    }
+            else -> null
+        }
 
-    private fun Model.findDescription(): String? = when {
-        description != null -> description
-        parent != null -> parent.getModel().findDescription()
-        else -> null
-    }
+    private fun Model.findDescription(): String? =
+        when {
+            description != null -> description
+            parent != null -> parent.getModel()
+                .findDescription()
 
-    private fun Model.findGroupId(): String? = when {
-        groupId != null -> groupId
-        parent != null -> if (parent.groupId != null) parent.groupId else parent.getModel().findGroupId()
-        else -> null
-    }
+            else -> null
+        }
 
-    private fun Model.findArtifactId(): String? = when {
-        artifactId != null -> artifactId
-        parent != null -> if (parent.artifactId != null) parent.artifactId else parent.getModel().findArtifactId()
-        else -> null
-    }
+    private fun Model.findGroupId(): String? =
+        when {
+            groupId != null -> groupId
+            parent != null -> if (parent.groupId != null) parent.groupId else parent.getModel()
+                .findGroupId()
+
+            else -> null
+        }
+
+    private fun Model.findArtifactId(): String? =
+        when {
+            artifactId != null -> artifactId
+            parent != null -> if (parent.artifactId != null) parent.artifactId else parent.getModel()
+                .findArtifactId()
+
+            else -> null
+        }
 
     private fun createReport(libraries: List<Library>) {
         if (libraries.isEmpty()) {
             return
         }
 
-        reports.getAll().forEach { licenseReport ->
-            if (licenseReport.enabled) {
-                val report = when (licenseReport.type) {
-                    ReportType.CSV -> CsvReport(libraries)
-                    ReportType.CUSTOM -> {
-                        val customReport = reports.custom.action
-                        if (customReport != null) {
-                            CustomReport(
-                                libraries,
-                                customReport,
-                            )
-                        } else {
-                            null
+        reports.getAll()
+            .forEach { licenseReport ->
+                if (licenseReport.enabled) {
+                    val report = when (licenseReport.type) {
+                        ReportType.CSV -> CsvReport(libraries)
+                        ReportType.CUSTOM -> {
+                            val customReport = reports.custom.action
+                            if (customReport != null) {
+                                CustomReport(
+                                    libraries,
+                                    customReport,
+                                )
+                            } else {
+                                null
+                            }
                         }
+
+                        ReportType.HTML -> HtmlReport(
+                            libraries,
+                            reports.html._stylesheet.orNull,
+                            reports.html.useDarkMode.get(),
+                            reports.html.reportTitle.get(),
+                            logger,
+                        )
+
+                        ReportType.JSON -> JsonReport(libraries)
+                        ReportType.MARKDOWN -> MarkdownReport(libraries, logger)
+                        ReportType.TEXT -> TextReport(libraries)
+                        ReportType.XML -> XmlReport(libraries)
                     }
 
-                    ReportType.HTML -> HtmlReport(
-                        libraries,
-                        reports.html._stylesheet.orNull,
-                        reports.html.useDarkMode.get(),
-                        logger,
-                    )
-
-                    ReportType.JSON -> JsonReport(libraries)
-                    ReportType.MARKDOWN -> MarkdownReport(libraries, logger)
-                    ReportType.TEXT -> TextReport(libraries)
-                    ReportType.XML -> XmlReport(libraries)
+                    report?.let { licenseReport.writeFileReport(it) }
                 }
-
-                report?.let { licenseReport.writeFileReport(it) }
             }
-        }
     }
 
     private fun LicensesReport.writeFileReport(report: Report) {
@@ -356,15 +388,16 @@ abstract class LicensesTask : DefaultTask() {
             project.configure(custom, config)
         }
 
-        override fun getAll(): List<LicensesReport> = listOf(
-            csv,
-            html,
-            json,
-            markdown,
-            text,
-            xml,
-            custom,
-        )
+        override fun getAll(): List<LicensesReport> =
+            listOf(
+                csv,
+                html,
+                json,
+                markdown,
+                text,
+                xml,
+                custom,
+            )
 
         private inner class LicenseReportDelegate<T : LicensesReport>(private val reportType: ReportType) :
             ReadOnlyProperty<Any?, T> {
@@ -373,7 +406,10 @@ abstract class LicensesTask : DefaultTask() {
 
             @Suppress("UNCHECKED_CAST")
             @OptIn(ExperimentalStdlibApi::class)
-            override fun getValue(thisRef: Any?, property: KProperty<*>): T {
+            override fun getValue(
+                thisRef: Any?,
+                property: KProperty<*>
+            ): T {
                 return if (::value.isInitialized) {
                     value
                 } else {
@@ -409,7 +445,9 @@ abstract class AndroidLicensesTask : LicensesTask() {
 
                 productFlavors.forEach { flavor ->
                     // Works for productFlavors and productFlavors with dimensions
-                    if (variant.capitalize().contains(flavor.capitalize())) {
+                    if (variant.capitalize()
+                            .contains(flavor.capitalize())
+                    ) {
                         addAll(addConfiguration(project, flavor))
                     }
                 }
@@ -420,19 +458,26 @@ abstract class AndroidLicensesTask : LicensesTask() {
     }
 
     @OptIn(ExperimentalStdlibApi::class)
-    private fun addConfiguration(project: Project, type: String) = buildSet {
-        project.configurations.find { it.name == "${type}Compile" }?.let {
-            add(it)
-        }
+    private fun addConfiguration(
+        project: Project,
+        type: String
+    ) =
+        buildSet {
+            project.configurations.find { it.name == "${type}Compile" }
+                ?.let {
+                    add(it)
+                }
 
-        project.configurations.find { it.name == "${type}Api" }?.let {
-            add(it)
-        }
+            project.configurations.find { it.name == "${type}Api" }
+                ?.let {
+                    add(it)
+                }
 
-        project.configurations.find { it.name == "${type}Implementation" }?.let {
-            add(it)
+            project.configurations.find { it.name == "${type}Implementation" }
+                ?.let {
+                    add(it)
+                }
         }
-    }
 }
 
 abstract class KotlinMultiplatformTask : LicensesTask() {
@@ -446,22 +491,25 @@ abstract class KotlinMultiplatformTask : LicensesTask() {
         val configurations = mutableSetOf<Configuration>()
 
         targetNames.forEach { name ->
-            project.configurations.find { it.name == "${name}MainApi" }?.let {
-                configurations.add(it)
-            }
-            project.configurations.find { it.name == "${name}MainImplementation" }?.let {
-                configurations.add(it)
-            }
+            project.configurations.find { it.name == "${name}MainApi" }
+                ?.let {
+                    configurations.add(it)
+                }
+            project.configurations.find { it.name == "${name}MainImplementation" }
+                ?.let {
+                    configurations.add(it)
+                }
         }
 
         addConfigurations(configurations)
     }
 }
 
-private fun File.writeText(text: String) = PrintStream(outputStream()).use {
-    it.print(text)
-    it.flush()
-}
+private fun File.writeText(text: String) =
+    PrintStream(outputStream()).use {
+        it.print(text)
+        it.flush()
+    }
 
 private fun File.prepare() {
     delete()
@@ -469,11 +517,20 @@ private fun File.prepare() {
     createNewFile()
 }
 
-private fun getLicenseId(licenseUrl: String, licenseName: String): LicenseId {
+private fun getLicenseId(
+    licenseUrl: String,
+    licenseName: String
+): LicenseId {
     val licenseMap = LicenseId.map
+    val licenseUrlKey =
+        licenseUrl.lowercase()
+            .trim()
+    val licenseNameKey =
+        licenseName.lowercase()
+            .trim()
     return when {
-        licenseMap.containsKey(licenseUrl) -> licenseMap[licenseUrl]!!
-        licenseMap.containsKey(licenseName) -> licenseMap[licenseName]!!
+        licenseMap.containsKey(licenseUrlKey) -> licenseMap[licenseUrlKey]!!
+        licenseMap.containsKey(licenseNameKey) -> licenseMap[licenseNameKey]!!
         else -> LicenseId.UNKNOWN
     }
 }

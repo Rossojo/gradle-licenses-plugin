@@ -16,10 +16,12 @@
 
 package com.cmgapps.license
 
+import com.cmgapps.license.model.LicenseId
 import com.cmgapps.license.reporter.LicensesReportsContainer
 import groovy.lang.Closure
 import org.gradle.api.Action
 import org.gradle.api.Project
+import java.io.Serializable
 
 @Suppress("unused")
 abstract class LicensesExtension(private val project: Project) {
@@ -49,7 +51,24 @@ abstract class LicensesExtension(private val project: Project) {
             else -> modules.toSet()
         }
     }
+
+    var additionalLibraries = emptySet<AdditionalLibrary>()
+
+    fun additionalLibraries(vararg libraries: AdditionalLibrary){
+        additionalLibraries = setOf(*libraries)
+    }
+
+    fun additionalLibraries(libraries: Collection<AdditionalLibrary>){
+        additionalLibraries = libraries.toSet()
+    }
 }
+
+data class AdditionalLibrary(
+    val name: String,
+    val licenseId: LicenseId,
+    val licenseName: String,
+    val licenseUrl: String,
+): Serializable
 
 @Suppress("unused")
 enum class OutputType {
