@@ -75,6 +75,8 @@ abstract class LicensesTask : DefaultTask() {
             .toSet()
     }
 
+    private val discoveredLicenses = mutableMapOf<ModelId, List<License>>()
+
     @Internal
     protected fun getAllProjects(): Set<Project> {
         return _allProjects
@@ -138,7 +140,7 @@ abstract class LicensesTask : DefaultTask() {
     private fun generateLibraries(): List<Library> {
         return pomConfiguration.resolvedConfiguration.lenientConfiguration.artifacts.map {
             val model = getPomModel(it.file)
-            val licenses = model.findLicenses()
+            val licenses = model.findLicenses(emptySet())
 
             if (licenses.isEmpty()) {
                 logger.warn("${model.name} dependency does not have a license.")
@@ -182,9 +184,23 @@ abstract class LicensesTask : DefaultTask() {
                 }
         }
 
-    private fun Model.findLicenses(): List<License> {
+    private fun Model.findLicenses(checkedModels: Set<ModelId>): List<License> {
+        logger.info("Checking model |$name ($groupId:$artifactId:$version)| for licenses")
+        val modelId = ModelId(name, groupId, artifactId, version)
+
+        val cachedLicenses = discoveredLicenses[modelId]
+        if (cachedLicenses != null) {
+            logger.info("Using already discovered licenses")
+            return cachedLicenses
+        }
+
+        if (checkedModels.contains(modelId)) {
+            logger.info("Already checked model |$modelId| in current model hierarchy. Return empty list")
+            return emptyList()
+        }
+
         if (licenses.isNotEmpty()) {
-            return licenses.mapNotNull { license ->
+            val licenses = licenses.mapNotNull { license ->
                 try {
                     val url = license.url
                     val name =
@@ -203,6 +219,8 @@ abstract class LicensesTask : DefaultTask() {
                     null
                 }
             }
+            discoveredLicenses[modelId] = licenses
+            return licenses
         }
 
         logger.info("Project $name has no license in POM file.")
@@ -210,7 +228,7 @@ abstract class LicensesTask : DefaultTask() {
         if (parent != null) {
             logger.info("Checking parent POM file.")
             return parent.getModel()
-                .findLicenses()
+                .findLicenses(checkedModels + setOf(modelId))
         }
 
         return emptyList()
@@ -534,3 +552,10 @@ private fun getLicenseId(
         else -> LicenseId.UNKNOWN
     }
 }
+
+private data class ModelId(
+    val name: String?,
+    val groupId: String?,
+    val artifactId: String?,
+    val version: String?,
+)

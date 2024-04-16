@@ -77,19 +77,16 @@ val scmUrl: String by pomProperties
 project.group = group
 version = versionName
 
-pluginBundle {
-    website = projectUrl
-    vcsUrl = scmUrl
-    tags = listOf("license-management", "android", "java", "java-library", "licenses")
-}
-
 gradlePlugin {
+    website.set(projectUrl)
+    vcsUrl.set(scmUrl)
     plugins {
         create("licensesPlugin") {
             id = "com.cmgapps.licenses"
             implementationClass = "com.cmgapps.license.LicensesPlugin"
             displayName = pomName
             description = pomDescription
+            tags.set(listOf("license-management", "android", "java", "java-library", "licenses"))
         }
     }
 
