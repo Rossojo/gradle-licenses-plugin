@@ -213,7 +213,7 @@ tasks {
         args = listOf(
             "src/**/*.kt",
             "--reporter=plain",
-            "--reporter=checkstyle,output=$buildDir/reports/ktlint.xml",
+            "--reporter=checkstyle,output=${project.layout.buildDirectory.get().asFile.absolutePath}/reports/ktlint.xml",
         )
     }
 
@@ -264,7 +264,9 @@ tasks {
     }
 
     dokkaJavadoc {
-        outputDirectory.set(buildDir.resolve("javadoc"))
+        outputDirectory.set(
+            project.layout.buildDirectory.dir("javadoc")
+                .map { it.asFile })
     }
 
     wrapper {
