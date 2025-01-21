@@ -12,7 +12,6 @@ import kotlinx.kover.api.DefaultJacocoEngine
 import kotlinx.kover.api.KoverTaskExtension
 import kotlinx.kover.api.VerificationValueType.COVERED_PERCENTAGE
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import java.util.Date
 import java.util.Properties
 
 plugins {
@@ -230,7 +229,7 @@ tasks {
                     "Implementation-Vendor" to "CMG Mobile Apps",
                     "Created-By" to """${System.getProperty("java.version")} (${System.getProperty("java.vendor")})""",
                     "Built-By" to System.getProperty("user.name"),
-                    "Built-Date" to Date(),
+//                    "Built-Date" to Date(),
                     "Built-JDK" to System.getProperty("java.version"),
                     "Built-Gradle" to gradle.gradleVersion,
                     "Built-Kotlin" to libs.versions.kotlin,
