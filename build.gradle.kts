@@ -7,10 +7,9 @@
 import com.cmgapps.gradle.logResults
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel
-import kotlinx.kover.api.CounterType
-import kotlinx.kover.api.DefaultJacocoEngine
-import kotlinx.kover.api.KoverTaskExtension
-import kotlinx.kover.api.VerificationValueType.COVERED_PERCENTAGE
+import kotlinx.kover.gradle.plugin.dsl.AggregationType
+import kotlinx.kover.gradle.plugin.dsl.MetricType
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.util.Properties
 
@@ -19,19 +18,12 @@ plugins {
     `java-gradle-plugin`
     `maven-publish`
     signing
-    @Suppress("DSL_SCOPE_VIOLATION")
     alias(libs.plugins.kotlin.jvm)
-    @Suppress("DSL_SCOPE_VIOLATION")
     alias(libs.plugins.kotlin.serialization)
-    @Suppress("DSL_SCOPE_VIOLATION")
     alias(libs.plugins.versions)
-    @Suppress("DSL_SCOPE_VIOLATION")
     alias(libs.plugins.gradle.pluginPublish)
-    @Suppress("DSL_SCOPE_VIOLATION")
     alias(libs.plugins.jetbrains.dokka)
-    @Suppress("DSL_SCOPE_VIOLATION")
     alias(libs.plugins.jetbrains.changelog)
-    @Suppress("DSL_SCOPE_VIOLATION")
     alias(libs.plugins.kotlinx.kover)
 }
 
@@ -168,15 +160,14 @@ changelog {
     header.set(provider { version.get() })
 }
 
-kover {
-    engine.set(DefaultJacocoEngine)
+koverReport {
     verify {
         rule {
             name = "Minimal Line coverage"
             bound {
                 minValue = 80
-                counter = CounterType.LINE
-                valueType = COVERED_PERCENTAGE
+                metric = MetricType.LINE
+                aggregation = AggregationType.COVERED_PERCENTAGE
             }
         }
     }
@@ -187,10 +178,6 @@ tasks {
         group = "verification"
         testClassesDirs = functionalTestSourceSet.output.classesDirs
         classpath = functionalTestSourceSet.runtimeClasspath
-
-        extensions.configure(KoverTaskExtension::class) {
-            isDisabled.set(true)
-        }
     }
 
     register<JavaExec>("ktlintFormat") {
@@ -256,9 +243,9 @@ tasks {
     }
 
     withType<KotlinCompile> {
-        kotlinOptions {
-            freeCompilerArgs = freeCompilerArgs + "-opt-in=kotlin.RequiresOptIn"
-            jvmTarget = "1.8"
+        compilerOptions {
+            freeCompilerArgs.add("-opt-in=kotlin.RequiresOptIn")
+            jvmTarget.set(JvmTarget.JVM_1_8)
         }
     }
 
