@@ -130,9 +130,8 @@ abstract class LicensesTask : DefaultTask() {
                     "${artifact.moduleVersion.id.group}:${artifact.moduleVersion.id.name}:${artifact.moduleVersion.id.version}@pom"
                 }
                     .forEach { pom ->
-                        pomConfiguration.dependencies.add(
-                            project.dependencies.add(POM_CONFIGURATION, pom),
-                        )
+                        project.dependencies.add(POM_CONFIGURATION, pom)
+                            ?.let { pomConfiguration.dependencies.add(it) }
                     }
             }
     }
@@ -237,9 +236,10 @@ abstract class LicensesTask : DefaultTask() {
     private fun Parent.getModel(): Model {
         val dependency = "$groupId:$artifactId:$version@pom"
 
-        project.configurations.create(TEMP_POM_CONFIGURATION).dependencies.add(
-            project.dependencies.add(TEMP_POM_CONFIGURATION, dependency),
-        )
+        project.configurations.create(TEMP_POM_CONFIGURATION).also { tempConfig ->
+            project.dependencies.add(TEMP_POM_CONFIGURATION, dependency)
+                ?.let { tempConfig.dependencies.add(it) }
+        }
 
         val pomFile = project.configurations.getByName(TEMP_POM_CONFIGURATION).incoming
             .artifacts.artifactFiles.singleFile

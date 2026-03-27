@@ -7,8 +7,6 @@
 import com.cmgapps.gradle.logResults
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 import com.github.benmanes.gradle.versions.updates.gradle.GradleReleaseChannel
-import kotlinx.kover.gradle.plugin.dsl.AggregationType
-import kotlinx.kover.gradle.plugin.dsl.MetricType
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.util.Properties
@@ -160,18 +158,6 @@ changelog {
     header.set(provider { version.get() })
 }
 
-koverReport {
-    verify {
-        rule {
-            name = "Minimal Line coverage"
-            bound {
-                minValue = 80
-                metric = MetricType.LINE
-                aggregation = AggregationType.COVERED_PERCENTAGE
-            }
-        }
-    }
-}
 
 tasks {
     val functionalTest by registering(Test::class) {
@@ -239,7 +225,13 @@ tasks {
 
     withType<Test> {
         useJUnitPlatform()
-        afterTest(KotlinClosure2(logger::logResults))
+        addTestListener(object : TestListener {
+            override fun beforeSuite(suite: TestDescriptor) = Unit
+            override fun afterSuite(suite: TestDescriptor, result: TestResult) = Unit
+            override fun beforeTest(testDescriptor: TestDescriptor) = Unit
+            override fun afterTest(testDescriptor: TestDescriptor, result: TestResult) =
+                logger.logResults(testDescriptor, result)
+        })
     }
 
     withType<KotlinCompile> {

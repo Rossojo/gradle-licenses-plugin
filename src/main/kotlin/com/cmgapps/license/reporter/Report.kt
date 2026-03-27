@@ -54,7 +54,7 @@ open class LicensesReport(internal val type: ReportType, task: Task, internal va
     init {
         val extension = if (type.extension.isBlank()) "" else ".${type.extension}"
         destination =
-            task.project.buildDir.resolve("reports/licenses").resolve(task.name).resolve("licenses$extension")
+            task.project.layout.buildDirectory.get().asFile.resolve("reports/licenses").resolve(task.name).resolve("licenses$extension")
     }
 
     internal open fun configure(
@@ -72,7 +72,7 @@ open class LicensesReport(internal val type: ReportType, task: Task, internal va
 
 class CustomizableHtmlReport(type: ReportType, task: Task, project: Project) : LicensesReport(type, task, project) {
 
-    internal val _stylesheet: Property<TextResource?> = task.project.objects.property(TextResource::class.java)
+    internal val _stylesheet: Property<TextResource> = task.project.objects.property(TextResource::class.java)
 
     @Input
     fun stylesheet(css: String) {
